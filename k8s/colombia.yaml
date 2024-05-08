@@ -1,0 +1,121 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: mlc
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mlc
+  namespace: mlc
+  labels:
+    tags.datadoghq.com/env: "prod" # Unified service tag - Pod Env tag
+    tags.datadoghq.com/service: "mlc" # Unified service tag - Pod Service tag
+    tags.datadoghq.com/version: "1.0" # Unified service tag - Pod Version tag
+spec:
+  selector:
+    matchLabels:
+      app: mlc
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: mlc
+        tags.datadoghq.com/env: "prod" # Unified service tag - Pod Env tag
+        tags.datadoghq.com/service: "mlc" # Unified service tag - Pod Service tag
+        tags.datadoghq.com/version: "1.0" # Unified service tag - Pod Version tag
+        admission.datadoghq.com/enabled: "true" # Enable Admission Controller to mutate new pods in this deployment
+      annotations:
+        admission.datadoghq.com/js-lib.version: "latest"
+    spec:
+      containers:
+      - image: mmoraesc/desafio-ml-mlc:latest
+        imagePullPolicy: Always
+        name: mlc
+        resources:
+          requests:
+            cpu: 10m
+            memory: 50Mi
+          limits:
+            cpu: 200m
+            memory: 256Mi
+        env:
+          - name: APP_NAME
+            valueFrom:
+              configMapKeyRef:
+                name: configmap-api
+                key: APP_NAME
+          - name: DB_PORT
+            valueFrom:
+              configMapKeyRef:
+                name: configmap-api
+                key: DB_PORT
+          - name: DB_NOME
+            valueFrom:
+              configMapKeyRef:
+                name: configmap-api
+                key: DB_NOME
+          - name: DB_URL
+            valueFrom:
+              configMapKeyRef:
+                name: configmap-api
+                key: DB_URL
+          - name: DB_USUARIO
+            valueFrom:
+              configMapKeyRef:
+                name: configmap-api
+                key: DB_USUARIO      
+          - name: API_PORT
+            valueFrom:
+              configMapKeyRef:
+                name: configmap-api
+                key: API_PORT
+          - name: DB_SENHA
+            valueFrom:
+              secretKeyRef:
+                name: secret-db-api
+                key: DB_SENHA
+          - name: DD_AGENT_HOST
+            valueFrom:
+              fieldRef:
+                fieldPath: status.hostIP
+          - name: DD_LOGS_INJECTION
+            value: "true"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mlc
+  namespace: mlc
+spec:
+  ports:
+  - targetPort: 8080 
+    port: 3003
+    nodePort: 30003
+    protocol: TCP
+  type: NodePort
+  selector:
+    app: mlc
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: configmap-api
+  namespace: mlc
+data:
+  APP_NAME: "mlc"
+  DB_PORT: "3306"
+  DB_USUARIO: "defiml"
+  DB_URL: "defiml.ccun5hhq8u6l.us-east-1.rds.amazonaws.com"
+  DB_NOME: "mlc"
+  API_PORT: "8080"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: secret-db-api
+  namespace: mlc
+type: Opaque
+data:
+  DB_SENHA: Hagnar469425
